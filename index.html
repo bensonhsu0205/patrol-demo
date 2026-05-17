@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="theme-color" content="#f97316">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="巡邏試用">
+<title>社區巡邏系統｜功能試用</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f1219;--sur:#1a2030;--card:#1e2535;--bdr:#2d3748;--pri:#f97316;--ok:#22c55e;--warn:#fbbf24;--err:#ef4444;--txt:#f9fafb;--dim:#6b7280;--acc:#38bdf8}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Noto Sans TC',-apple-system,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;overflow-x:hidden;-webkit-text-size-adjust:100%;font-size:18px}
+button{font-family:inherit;cursor:pointer}
+input,textarea{font-family:inherit;font-size:18px}
+.topbar{background:var(--pri);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.topbar-l{font-size:19px;color:#fff;font-weight:800;flex:1;margin-right:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-r{text-align:right;flex-shrink:0}
+.demo-bar{background:#1c1a05;border-bottom:2px solid var(--warn);padding:10px 16px;text-align:center;font-size:14px;color:var(--warn);font-weight:600;letter-spacing:.3px}
+.card{background:var(--sur);border:1px solid var(--bdr);border-radius:14px;padding:18px;margin-bottom:14px}
+.input{background:var(--bg);border:1px solid var(--bdr);border-radius:10px;color:var(--txt);padding:14px 15px;font-size:18px;width:100%}
+.input:focus{outline:none;border-color:var(--pri)}
+.content{padding:12px 14px 120px;max-width:480px;margin:0 auto;width:100%}
+.content2{padding:20px 16px 60px;max-width:480px;margin:0 auto;width:100%}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--sur);border-top:1px solid var(--bdr);padding:14px 16px;z-index:100}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;z-index:400}
+.modal-sheet{background:var(--sur);border:1px solid var(--bdr);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px}
+.toast{position:fixed;top:90px;left:50%;transform:translateX(-50%);background:#1f2937;border:1px solid var(--bdr);border-radius:14px;padding:14px 24px;font-size:16px;color:var(--txt);box-shadow:0 6px 24px rgba(0,0,0,.5);z-index:700;max-width:88vw;text-align:center;pointer-events:none;animation:fi .2s ease}
+@keyframes fi{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.blink{animation:blink 1.2s infinite}
+.shift-btn{flex:1;padding:22px 8px;border-radius:16px;border:2.5px solid var(--bdr);background:var(--sur);color:var(--dim);cursor:pointer;text-align:center;transition:all .2s}
+.ftab{padding:8px 16px;border-radius:20px;border:1px solid var(--bdr);background:transparent;color:var(--dim);font-size:15px;cursor:pointer;transition:all .2s}
+.ftab.on{border-color:var(--pri);background:rgba(249,115,22,.15);color:var(--pri)}
+.ztab{padding:7px 14px;border-radius:20px;border:1.5px solid var(--bdr);background:transparent;color:var(--dim);font-size:14px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .2s}
+.ztab.zon{font-weight:700}
+.tc{border-radius:14px;margin-bottom:12px;overflow:hidden;border:2px solid}
+.tc.done{background:#052e16;border-color:var(--ok)}
+.tc.overdue{background:#2d0a0a;border-color:var(--err)}
+.tc.due{background:#1c1505;border-color:var(--warn)}
+.tc.upcoming{background:var(--card);border-color:var(--bdr)}
+.zone-tag{font-size:14px;padding:4px 10px;border-radius:10px;font-weight:600;display:inline-block}
+.chk{width:44px;height:44px;border-radius:50%;border:3px solid;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;flex-shrink:0;transition:all .2s}
+.prog-bg{background:var(--bg);border-radius:4px;height:8px;overflow:hidden}
+.prog-fill{height:100%;border-radius:4px;transition:width .5s}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ── 純本地狀態，不連任何後端 ─────────────────────────────────────────────────
+const ZC={'外哨':'#fb923c','三期':'#60a5fa','四期':'#a78bfa','外圍':'#34d399','電錶':'#f87171','其他':'#9ca3af'};
+const TI={'開啟':'💡','關閉':'🔌','抄表':'📸','巡查':'👁️'};
+const SC={early:'#fb923c',late:'#8b5cf6'};
+const SL={early:'早班 07:00–19:00',late:'晚班 19:00–07:00'};
+
+const TASKS=[
+  {id:'1',time:'06:10',zone:'外圍',task:'外圍及中庭壁燈、高柱燈是否關閉',type:'關閉',shifts:['early','late']},
+  {id:'2',time:'06:20',zone:'三期',task:'三期各棟電視是否開啟',type:'開啟',shifts:['early','late']},
+  {id:'3',time:'06:20',zone:'四期',task:'四期各棟電視是否開啟',type:'開啟',shifts:['early','late']},
+  {id:'4',time:'07:00',zone:'外哨',task:'外哨柵欄燈條是否關閉',type:'關閉',shifts:['early','late']},
+  {id:'5',time:'18:00',zone:'外哨',task:'外哨柵欄燈條是否開啟',type:'開啟',shifts:['early']},
+  {id:'6',time:'18:10',zone:'三期',task:'三期外圍及中庭所有燈光是否開啟',type:'開啟',shifts:['early']},
+  {id:'7',time:'18:10',zone:'四期',task:'四期外圍及中庭所有燈光是否開啟',type:'開啟',shifts:['early']},
+  {id:'8',time:'21:20',zone:'四期',task:'四期公設（含燈光、冷氣、機台電源），除健身房，是否關閉',type:'關閉',shifts:['late']},
+  {id:'9',time:'21:30',zone:'三期',task:'三期公設（含燈光、冷氣、機台電源）是否關閉',type:'關閉',shifts:['late']},
+  {id:'10',time:'22:05',zone:'外圍',task:'外圍及中庭燈光（除壁燈、高柱燈）是否確認關閉',type:'關閉',shifts:['late']},
+  {id:'11',time:'23:00',zone:'三期',task:'三期大廳部分燈光是否關閉，各棟電視是否關閉',type:'關閉',shifts:['late']},
+  {id:'12',time:'23:00',zone:'四期',task:'四期大廳部分燈光是否關閉，各棟電視是否關閉',type:'關閉',shifts:['late']},
+  {id:'13',time:'00:10',zone:'四期',task:'四期健身房（燈光、冷氣、機台電源）是否關閉',type:'關閉',shifts:['late']},
+  {id:'14',time:'02:00',zone:'電錶',task:'電錶是否拍照抄表',type:'抄表',shifts:['late']},
+];
+
+const S={
+  screen:'login',
+  shift:null,officer:'',
+  checkins:{},notes:{},
+  countdowns:{},
+  filter:'all',zoneFilter:'all',
+  showExport:false,exportTxt:'',
+  editing:false,
+};
+
+let clkIv=null,cdIv=null,toastTm=null;
+
+// ── Utils ────────────────────────────────────────────────────────────────────
+function toMin(t){const[h,m]=t.split(':').map(Number);if(S.shift==='late'&&h>=6&&h<12)return h*60+m+1440;return h<6?h*60+m+1440:h*60+m}
+function nowMin(){const n=new Date(),h=n.getHours(),m=n.getMinutes();if(S.shift==='late'&&h>=6&&h<12)return h*60+m+1440;return h<6?h*60+m+1440:h*60+m}
+function nowTs(){return new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',hour12:false})}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function canChk(t){return nowMin()>=toMin(t.time)-3}
+function status(t){
+  if(S.checkins[t.id])return'done';
+  const d=toMin(t.time)-nowMin();
+  if(nowMin()-toMin(t.time)>15)return'overdue';
+  if(d<=15)return'due';
+  return'upcoming';
+}
+function shiftTasks(){
+  return TASKS.filter(t=>S.shift&&t.shifts.includes(S.shift)).sort((a,b)=>toMin(a.time)-toMin(b.time));
+}
+function toast(msg){
+  document.querySelectorAll('.toast').forEach(e=>e.remove());
+  if(toastTm)clearTimeout(toastTm);
+  const d=document.createElement('div');d.className='toast';d.textContent=msg;
+  document.body.appendChild(d);
+  toastTm=setTimeout(()=>d.remove(),3000);
+}
+async function copyText(txt){
+  try{await navigator.clipboard.writeText(txt);toast('✅ 已複製！')}
+  catch(e){toast('請長按文字框手動複製')}
+}
+
+// ── 打卡（純本地）─────────────────────────────────────────────────────────────
+function doCheckIn(tid){
+  const off=S.officer.trim()||'體驗者';
+  S.checkins[tid]={officer:off,time:nowTs()};
+  S.countdowns[tid]=10;
+  rerender();
+}
+function doRevoke(tid){
+  delete S.checkins[tid];
+  delete S.countdowns[tid];
+  toast('✅ 已取消打卡');
+  rerender();
+}
+
+// ── Timers ───────────────────────────────────────────────────────────────────
+function startTimers(){
+  stopTimers();
+  clkIv=setInterval(()=>{
+    const el=document.getElementById('clk');
+    if(el)el.textContent=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  },1000);
+  cdIv=setInterval(()=>{
+    let ch=false;
+    Object.keys(S.countdowns).forEach(id=>{
+      if(S.countdowns[id]>0){S.countdowns[id]--;ch=true;}
+      else{delete S.countdowns[id];ch=true;}
+    });
+    if(ch){
+      Object.keys(S.countdowns).forEach(id=>{
+        const el=document.getElementById('cd-'+id);
+        if(el)el.textContent=S.countdowns[id];
+      });
+      Object.keys(S.checkins).filter(id=>S.countdowns[id]===undefined).forEach(id=>{
+        const circle=document.getElementById('c-'+id);
+        if(circle&&S.checkins[id]){
+          circle.style.background='var(--ok)';circle.style.borderColor='var(--ok)';
+          circle.style.color='#fff';circle.style.cursor='default';circle.innerHTML='✓';
+        }
+        const graceTxt=document.getElementById('grace-'+id);if(graceTxt)graceTxt.remove();
+        const doneTxt=document.getElementById('done-'+id);if(doneTxt)doneTxt.style.display='block';
+      });
+    }
+  },1000);
+}
+function stopTimers(){if(clkIv)clearInterval(clkIv);if(cdIv)clearInterval(cdIv);clkIv=null;cdIv=null;}
+
+// ── Export ───────────────────────────────────────────────────────────────────
+function buildExport(){
+  const st=shiftTasks(),done=st.filter(t=>S.checkins[t.id]).length;
+  const d=new Date().toLocaleDateString('zh-TW'),ts=nowTs();
+  const label=SL[S.shift];
+  let txt='📋 巡邏紀錄（功能試用）\n🏢 示範社區　'+label+'\n📅 '+d+'　時間：'+ts+'\n值班：'+(S.officer.trim()||'體驗者')+'\n──────────────────\n';
+  st.forEach(t=>{
+    const ck=S.checkins[t.id];
+    txt+=(ck?'✅':'🔲')+' '+t.time+' ['+t.zone+'] '+t.task+(ck?' （'+ck.time+' · '+ck.officer+'）':'')+'\n';
+  });
+  txt+='──────────────────\n完成：'+done+'/'+st.length+'（'+Math.round(done/st.length*100||0)+'%）\n🏠 寶哥說物業管理小常識 @bensonhsu0205';
+  return txt;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render(){
+  if(S.editing)return;
+  const app=document.getElementById('app');if(!app)return;
+  if(S.screen==='login')app.innerHTML=rLogin();
+  else if(S.screen==='patrol')app.innerHTML=rPatrol();
+  bind();
+}
+function rerender(){
+  if(S.editing)return;
+  const app=document.getElementById('app');if(!app)return;
+  if(S.screen==='patrol')app.innerHTML=rPatrol();
+  bind();
+}
+
+// ── Topbar ────────────────────────────────────────────────────────────────────
+function topbar(){
+  return`<div class="topbar">
+    <div class="topbar-l">🏢 社區巡邏系統</div>
+    <div class="topbar-r">
+      <div style="font-size:13px;color:#fed7aa;font-weight:600;">寶哥說物業管理小常識</div>
+      <div style="font-size:12px;color:#fed7aa;opacity:.8;">@bensonhsu0205</div>
+    </div>
+  </div>
+  <div class="demo-bar">⚡ 功能試用版 — 資料僅存在您的瀏覽器，關閉即清除，不影響任何正式系統</div>`;
+}
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+function rLogin(){
+  return`<div>${topbar()}
+  <div class="content2">
+    <div style="text-align:center;margin-bottom:28px;padding-top:8px;">
+      <div style="font-size:13px;color:var(--pri);letter-spacing:4px;margin-bottom:8px;">🛡️ PATROL SYSTEM</div>
+      <div style="font-size:28px;font-weight:800;">社區巡邏系統</div>
+      <div style="font-size:15px;color:var(--dim);margin-top:8px;">體驗打卡、進度追蹤、LINE匯出</div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <div style="font-size:15px;color:var(--dim);margin-bottom:8px;font-weight:600;">您的名字（選填）</div>
+      <input class="input" id="iOff" value="${esc(S.officer)}" placeholder="填入名字，打卡紀錄會顯示">
+    </div>
+
+    <div style="margin-bottom:24px;">
+      <div style="font-size:15px;color:var(--dim);margin-bottom:10px;font-weight:600;">選擇班別體驗</div>
+      <div style="display:flex;gap:14px;">
+        <button class="shift-btn" data-sh="early" style="${S.shift==='early'?'border-color:#fb923c;background:rgba(251,146,60,.12);color:#fb923c;':''}">
+          <div style="font-size:30px;margin-bottom:6px;">☀️</div>
+          <div style="font-size:20px;font-weight:800;">早班</div>
+          <div style="font-size:15px;margin-top:4px;opacity:.8;">07:00–19:00</div>
+          <div style="font-size:13px;margin-top:6px;opacity:.65;">5 個任務</div>
+        </button>
+        <button class="shift-btn" data-sh="late" style="${S.shift==='late'?'border-color:#8b5cf6;background:rgba(139,92,246,.12);color:#8b5cf6;':''}">
+          <div style="font-size:30px;margin-bottom:6px;">🌙</div>
+          <div style="font-size:20px;font-weight:800;">晚班</div>
+          <div style="font-size:15px;margin-top:4px;opacity:.8;">19:00–07:00</div>
+          <div style="font-size:13px;margin-top:6px;opacity:.65;">11 個任務</div>
+        </button>
+      </div>
+    </div>
+
+    <button id="startBtn" style="width:100%;padding:20px;border-radius:14px;background:${S.shift?'var(--pri)':'var(--sur)'};border:none;color:${S.shift?'#fff':'var(--dim)'};font-size:21px;font-weight:800;margin-bottom:16px;">開始體驗 →</button>
+
+    <div style="background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:12px;padding:16px;font-size:14px;color:var(--acc);line-height:1.8;">
+      📌 試用說明：點擊任務左側圓圈即可打卡，10秒內可取消。<br>
+      體驗完成後可點「匯出 LINE」看輸出結果。<br>
+      <span style="opacity:.7;">本試用版不連網路，所有資料僅在您的瀏覽器中。</span>
+    </div>
+  </div>
+  <div style="padding:16px;text-align:center;border-top:1px solid var(--bdr);">
+    <div style="font-size:14px;color:var(--dim);">寶哥說物業管理小常識 @bensonhsu0205</div>
+  </div>
+  </div>`;
+}
+
+// ── Patrol ────────────────────────────────────────────────────────────────────
+function rPatrol(){
+  const st=shiftTasks(),done=st.filter(t=>S.checkins[t.id]).length;
+  const prog=st.length?Math.round(done/st.length*100):0,allDone=st.length>0&&done===st.length;
+  const disp=st.filter(t=>{
+    const sm=S.filter==='pending'?!S.checkins[t.id]:S.filter==='done'?!!S.checkins[t.id]:true;
+    const zm=S.zoneFilter==='all'||t.zone===S.zoneFilter;
+    return sm&&zm;
+  });
+  const sc=SC[S.shift],sl=SL[S.shift];
+  const clk=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  return`<div>${topbar()}
+  <div style="background:var(--sur);border-bottom:1px solid var(--bdr);padding:14px 16px 13px;position:sticky;top:86px;z-index:100;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+      <div>
+        <div style="font-size:15px;color:${sc};font-weight:800;margin-bottom:2px;">● ${sl}</div>
+        <div id="clk" style="font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;">${clk}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:42px;font-weight:800;color:${allDone?'var(--ok)':'var(--pri)'};line-height:1;">${done}</div>
+        <div style="font-size:15px;color:var(--dim);">/ ${st.length} 完成</div>
+      </div>
+    </div>
+    <div class="prog-bg" style="margin-bottom:5px;"><div class="prog-fill" style="width:${prog}%;background:${allDone?'var(--ok)':'var(--pri)'}"></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="font-size:15px;color:var(--dim);">${prog}% 完成</span>
+      <button id="expBtn" style="font-size:14px;padding:8px 15px;border-radius:12px;background:${allDone?'var(--ok)':'var(--pri)'};border:none;color:#fff;font-weight:700;">${allDone?'✅ 完成！複製報告':'📋 匯出 LINE'}</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <button class="ftab${S.filter==='all'?' on':''}" data-f="all">全部</button>
+      <button class="ftab${S.filter==='pending'?' on':''}" data-f="pending">待執行</button>
+      <button class="ftab${S.filter==='done'?' on':''}" data-f="done">已完成</button>
+      <button id="backBtn" style="margin-left:auto;padding:8px 14px;border-radius:20px;border:1px solid var(--bdr);background:transparent;color:var(--dim);font-size:14px;">← 重選</button>
+    </div>
+    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;">
+      <button class="ztab${S.zoneFilter==='all'?' zon':''}" data-z="all">📍 全區</button>
+      ${[...new Set(st.map(t=>t.zone))].map(z=>`<button class="ztab${S.zoneFilter===z?' zon':''}" data-z="${z}" style="color:${ZC[z]||'#9ca3af'};${S.zoneFilter===z?'border-color:'+(ZC[z]||'#9ca3af')+';background:'+(ZC[z]||'#9ca3af')+'22;':''}">${z}</button>`).join('')}
+    </div>
+  </div>
+  <div class="content">
+    ${disp.length===0?`<div style="text-align:center;color:var(--dim);padding:70px 0;font-size:19px;">沒有符合的項目</div>`:''}
+    ${disp.map(t=>rTask(t)).join('')}
+  </div>
+  <div class="bottom-bar">
+    <div style="display:flex;justify-content:space-around;max-width:480px;margin:0 auto;">
+      ${[
+        {l:'待執行',c:st.filter(t=>status(t)==='upcoming').length,cl:'var(--dim)'},
+        {l:'即將到',c:st.filter(t=>status(t)==='due').length,cl:'var(--warn)'},
+        {l:'⚠️逾時',c:st.filter(t=>status(t)==='overdue').length,cl:'var(--err)'},
+        {l:'已完成',c:done,cl:'var(--ok)'}
+      ].map(x=>`<div style="text-align:center;"><div style="font-size:28px;font-weight:800;color:${x.cl};line-height:1;">${x.c}</div><div style="font-size:13px;color:var(--dim);margin-top:3px;">${x.l}</div></div>`).join('')}
+    </div>
+  </div>
+  ${S.showExport?rExport():''}
+  </div>`;
+}
+
+function rTask(t){
+  const st=status(t),ck=S.checkins[t.id],inGrace=S.countdowns[t.id]!==undefined;
+  const early=!ck&&!canChk(t),zc=ZC[t.zone]||'#9ca3af';
+  const stTxt=ck?(inGrace?S.countdowns[t.id]+'秒後鎖定':'已完成'):st==='overdue'?'⚠️逾時':st==='due'?'即將到':'待執行';
+  const stCl=ck?(inGrace?'var(--warn)':'var(--ok)'):st==='overdue'?'var(--err)':st==='due'?'var(--warn)':'var(--dim)';
+  const blink=(st==='due'||st==='overdue')&&!ck?' blink':'';
+  const cirBg=ck?(inGrace?'rgba(251,191,36,.2)':'var(--ok)'):'transparent';
+  const cirBdr=ck?(inGrace?'var(--warn)':'var(--ok)'):early?'var(--bdr)':st==='overdue'?'var(--err)':st==='due'?'var(--warn)':'var(--bdr)';
+  const cirTxt=ck?(inGrace?`<span id="cd-${t.id}">${S.countdowns[t.id]}</span>`:'✓'):(early?'🔒':'');
+  const cirCur=ck&&!inGrace?'default':early?'not-allowed':'pointer';
+  const cirOp=early?.3:1;
+  return`<div class="tc ${st}">
+  <div style="padding:17px;">
+    <div style="display:flex;align-items:flex-start;gap:13px;">
+      <div id="c-${t.id}" class="chk" data-chk="${t.id}" style="background:${cirBg};border-color:${cirBdr};color:${ck?(inGrace?'var(--warn)':'#fff'):'inherit'};cursor:${cirCur};opacity:${cirOp};">${cirTxt}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:7px;">
+          <span style="font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;">${t.time}</span>
+          <span class="zone-tag" style="background:${zc}22;color:${zc};border:1px solid ${zc}33;">${t.zone}</span>
+          <span style="font-size:18px;">${TI[t.type]||''}</span>
+        </div>
+        <div style="font-size:18px;color:${ck?'#374151':'var(--txt)'};line-height:1.6;text-decoration:${ck&&!inGrace?'line-through':'none'};">${esc(t.task)}</div>
+        ${early?`<div style="font-size:15px;color:var(--dim);margin-top:5px;">🔒 ${t.time} 前3分鐘才可執行</div>`:''}
+        ${ck&&inGrace?`<div id="grace-${t.id}" style="font-size:15px;color:var(--warn);font-weight:700;margin-top:5px;">⚠️ 點圓圈可取消（<span id="cd-${t.id}">${S.countdowns[t.id]}</span>秒）</div>`:''}
+        ${ck&&!inGrace?`<div id="done-${t.id}" style="font-size:15px;color:var(--ok);font-weight:700;margin-top:5px;">✓ ${ck.time} · ${esc(ck.officer)}</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:4px;">
+          <div style="width:9px;height:9px;border-radius:50%;background:${stCl};" class="${blink}"></div>
+          <span style="font-size:13px;color:${stCl};font-weight:700;">${stTxt}</span>
+        </div>
+        ${ck&&inGrace?`<button class="rvk" data-tid="${t.id}" style="font-size:13px;padding:8px 12px;border-radius:8px;border:1px solid var(--warn);background:transparent;color:var(--warn);font-weight:700;">取消</button>`:''}
+      </div>
+    </div>
+  </div>
+  </div>`;
+}
+
+// ── Export modal ──────────────────────────────────────────────────────────────
+function rExport(){
+  const allDone=shiftTasks().every(t=>S.checkins[t.id]);
+  return`<div class="modal-bg"><div class="modal-sheet">
+  <div style="font-size:20px;font-weight:700;margin-bottom:6px;">${allDone?'✅ 全部完成！':'📤 巡邏報告'}</div>
+  <div style="font-size:15px;color:var(--dim);margin-bottom:12px;">這就是匯出到 LINE 的格式</div>
+  <textarea readonly style="width:100%;height:220px;background:var(--bg);border:1px solid var(--bdr);border-radius:10px;color:var(--txt);font-size:13px;padding:13px;font-family:monospace;resize:none;">${esc(S.exportTxt)}</textarea>
+  <div style="display:flex;gap:10px;margin-top:12px;">
+    <button id="cpExp" style="flex:1;padding:17px;border-radius:12px;background:${allDone?'var(--ok)':'var(--pri)'};border:none;color:#fff;font-size:18px;font-weight:700;">複製到剪貼板</button>
+    <button id="clsExp" style="padding:17px 20px;border-radius:12px;background:transparent;border:1px solid var(--bdr);color:var(--dim);font-size:18px;">關閉</button>
+  </div>
+  </div></div>`;
+}
+
+// ── Bind ──────────────────────────────────────────────────────────────────────
+function bind(){
+  document.querySelectorAll('input,textarea').forEach(el=>{
+    el.addEventListener('focus',()=>S.editing=true);
+    el.addEventListener('blur',()=>S.editing=false);
+  });
+
+  // Login
+  const iOff=document.getElementById('iOff');
+  if(iOff)iOff.addEventListener('input',e=>S.officer=e.target.value);
+  document.querySelectorAll('.shift-btn').forEach(b=>{b.addEventListener('click',e=>{S.shift=e.currentTarget.dataset.sh;render();});});
+  const startBtn=document.getElementById('startBtn');
+  if(startBtn)startBtn.addEventListener('click',()=>{
+    if(!S.shift){toast('請選擇班別');return;}
+    S.screen='patrol';startTimers();render();
+  });
+
+  // Patrol
+  document.querySelectorAll('[data-chk]').forEach(el=>{
+    el.addEventListener('click',e=>{
+      const tid=e.currentTarget.dataset.chk;
+      const t=TASKS.find(x=>x.id===tid);if(!t)return;
+      if(S.checkins[tid]){
+        if(S.countdowns[tid]!==undefined)doRevoke(tid);
+        else toast('已永久鎖定');
+        return;
+      }
+      if(!canChk(t)){toast('🔒 請於 '+t.time+' 前3分鐘後才能打卡');return;}
+      doCheckIn(tid);
+    });
+  });
+  document.querySelectorAll('.ftab').forEach(b=>{b.addEventListener('click',e=>{S.filter=e.currentTarget.dataset.f;rerender();});});
+  document.querySelectorAll('.ztab').forEach(b=>{b.addEventListener('click',e=>{S.zoneFilter=e.currentTarget.dataset.z;rerender();});});
+  document.querySelectorAll('.rvk').forEach(b=>{b.addEventListener('click',e=>doRevoke(e.currentTarget.dataset.tid));});
+  const expBtn=document.getElementById('expBtn');
+  if(expBtn)expBtn.addEventListener('click',()=>{S.exportTxt=buildExport();S.showExport=true;rerender();});
+  const backBtn=document.getElementById('backBtn');
+  if(backBtn)backBtn.addEventListener('click',()=>{
+    stopTimers();S.screen='login';S.checkins={};S.notes={};S.countdowns={};S.filter='all';S.zoneFilter='all';S.shift=null;
+    render();
+  });
+
+  // Export
+  const cpExp=document.getElementById('cpExp');
+  if(cpExp)cpExp.addEventListener('click',async()=>{await copyText(S.exportTxt);S.showExport=false;rerender();});
+  const clsExp=document.getElementById('clsExp');
+  if(clsExp)clsExp.addEventListener('click',()=>{S.showExport=false;rerender();});
+}
+
+render();
+</script>
+</body>
+</html>
