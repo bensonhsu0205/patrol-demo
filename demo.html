@@ -81,7 +81,7 @@ const S={
   checkins:{},notes:{},
   countdowns:{},
   filter:'all',zoneFilter:'all',
-  showExport:false,exportTxt:'',
+  showExport:false,exportTxt:'',exportCopied:false,
   editing:false,
 };
 
@@ -347,16 +347,21 @@ function rTask(t){
 // ── Export modal ──────────────────────────────────────────────────────────────
 function rExport(){
   const allDone=shiftTasks().every(t=>S.checkins[t.id]);
+  const copied=S.exportCopied;
   return`<div class="modal-bg" id="modalBg">
   <div class="modal-sheet" onclick="event.stopPropagation()">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div style="font-size:20px;font-weight:700;">${allDone?'✅ 全部完成！':'📤 巡邏報告'}</div>
-      <button id="clsExp" style="width:38px;height:38px;border-radius:50%;border:1px solid var(--bdr);background:transparent;color:var(--dim);font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
-    </div>
-    <div style="font-size:14px;color:var(--dim);margin-bottom:10px;">這就是匯出到 LINE 的格式，複製後貼到群組</div>
-    <textarea readonly style="width:100%;height:160px;background:var(--bg);border:1px solid var(--bdr);border-radius:10px;color:var(--txt);font-size:13px;padding:13px;font-family:monospace;resize:none;">${esc(S.exportTxt)}</textarea>
-    <button id="cpExp" style="width:100%;padding:17px;border-radius:12px;background:${allDone?'var(--ok)':'var(--pri)'};border:none;color:#fff;font-size:18px;font-weight:700;margin-top:12px;">📋 複製到剪貼板</button>
-    <button id="clsExp2" style="width:100%;padding:14px;border-radius:12px;background:transparent;border:1px solid var(--bdr);color:var(--dim);font-size:17px;margin-top:8px;">關閉</button>
+    <div style="font-size:20px;font-weight:700;margin-bottom:6px;">${allDone?'✅ 全部完成！':'📤 巡邏報告'}</div>
+    <div style="font-size:14px;color:var(--dim);margin-bottom:12px;">以下是匯出到 LINE 的格式</div>
+    <textarea readonly style="width:100%;height:150px;background:var(--bg);border:1px solid var(--bdr);border-radius:10px;color:var(--txt);font-size:13px;padding:13px;font-family:monospace;resize:none;display:${copied?'none':'block'};">${esc(S.exportTxt)}</textarea>
+    ${copied
+      ? `<div style="background:#052e16;border:2px solid var(--ok);border-radius:14px;padding:22px;text-align:center;margin-bottom:4px;">
+          <div style="font-size:32px;margin-bottom:10px;">✅</div>
+          <div style="font-size:20px;font-weight:800;color:var(--ok);margin-bottom:8px;">已複製！</div>
+          <div style="font-size:16px;color:#4ade80;line-height:1.8;">請打開 LINE<br>貼到對話框傳給主管或群組</div>
+        </div>`
+      : `<button id="cpExp" style="width:100%;padding:17px;border-radius:12px;background:${allDone?'var(--ok)':'var(--pri)'};border:none;color:#fff;font-size:19px;font-weight:800;margin-top:10px;">📋 複製報告</button>`
+    }
+    <button id="clsExp" style="width:100%;padding:16px;border-radius:12px;background:${copied?'var(--pri)':'transparent'};border:${copied?'none':'1px solid var(--bdr)'};color:${copied?'#fff':'var(--dim)'};font-size:18px;font-weight:${copied?'700':'400'};margin-top:10px;">${copied?'關閉，重新開始 →':'關閉'}</button>
   </div>
   </div>`;
 }
@@ -405,13 +410,24 @@ function bind(){
 
   // Export
   const modalBg=document.getElementById('modalBg');
-  if(modalBg)modalBg.addEventListener('click',()=>{S.showExport=false;rerender();});
+  if(modalBg)modalBg.addEventListener('click',()=>{S.showExport=false;S.exportCopied=false;rerender();});
   const cpExp=document.getElementById('cpExp');
-  if(cpExp)cpExp.addEventListener('click',async()=>{await copyText(S.exportTxt);S.showExport=false;rerender();});
+  if(cpExp)cpExp.addEventListener('click',async()=>{
+    await copyText(S.exportTxt);
+    S.exportCopied=true;
+    rerender();
+  });
   const clsExp=document.getElementById('clsExp');
-  if(clsExp)clsExp.addEventListener('click',()=>{S.showExport=false;rerender();});
-  const clsExp2=document.getElementById('clsExp2');
-  if(clsExp2)clsExp2.addEventListener('click',()=>{S.showExport=false;rerender();});
+  if(clsExp)clsExp.addEventListener('click',()=>{
+    S.showExport=false;S.exportCopied=false;
+    if(S.exportCopied||true){
+      // 關閉後重置回登入頁
+      stopTimers();
+      S.screen='login';S.checkins={};S.notes={};S.countdowns={};
+      S.filter='all';S.zoneFilter='all';S.shift=null;S.officer='';
+    }
+    render();
+  });
 }
 
 render();
