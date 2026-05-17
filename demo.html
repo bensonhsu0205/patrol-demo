@@ -418,16 +418,7 @@ function bind(){
     rerender();
   });
   const clsExp=document.getElementById('clsExp');
-  if(clsExp)clsExp.addEventListener('click',()=>{
-    S.showExport=false;S.exportCopied=false;
-    if(S.exportCopied||true){
-      // 關閉後重置回登入頁
-      stopTimers();
-      S.screen='login';S.checkins={};S.notes={};S.countdowns={};
-      S.filter='all';S.zoneFilter='all';S.shift=null;S.officer='';
-    }
-    render();
-  });
+  if(clsExp)clsExp.addEventListener('click',()=>location.reload());
 }
 
 render();
