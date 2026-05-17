@@ -25,8 +25,8 @@ input,textarea{font-family:inherit;font-size:18px}
 .content{padding:12px 14px 120px;max-width:480px;margin:0 auto;width:100%}
 .content2{padding:20px 16px 60px;max-width:480px;margin:0 auto;width:100%}
 .bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--sur);border-top:1px solid var(--bdr);padding:14px 16px;z-index:100}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;z-index:400}
-.modal-sheet{background:var(--sur);border:1px solid var(--bdr);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:20px;z-index:400}
+.modal-sheet{background:var(--sur);border:1px solid var(--bdr);border-radius:20px;padding:22px;width:100%;max-width:460px;max-height:88vh;overflow-y:auto}
 .toast{position:fixed;top:90px;left:50%;transform:translateX(-50%);background:#1f2937;border:1px solid var(--bdr);border-radius:14px;padding:14px 24px;font-size:16px;color:var(--txt);box-shadow:0 6px 24px rgba(0,0,0,.5);z-index:700;max-width:88vw;text-align:center;pointer-events:none;animation:fi .2s ease}
 @keyframes fi{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
@@ -347,15 +347,18 @@ function rTask(t){
 // ── Export modal ──────────────────────────────────────────────────────────────
 function rExport(){
   const allDone=shiftTasks().every(t=>S.checkins[t.id]);
-  return`<div class="modal-bg"><div class="modal-sheet">
-  <div style="font-size:20px;font-weight:700;margin-bottom:6px;">${allDone?'✅ 全部完成！':'📤 巡邏報告'}</div>
-  <div style="font-size:15px;color:var(--dim);margin-bottom:12px;">這就是匯出到 LINE 的格式</div>
-  <textarea readonly style="width:100%;height:220px;background:var(--bg);border:1px solid var(--bdr);border-radius:10px;color:var(--txt);font-size:13px;padding:13px;font-family:monospace;resize:none;">${esc(S.exportTxt)}</textarea>
-  <div style="display:flex;gap:10px;margin-top:12px;">
-    <button id="cpExp" style="flex:1;padding:17px;border-radius:12px;background:${allDone?'var(--ok)':'var(--pri)'};border:none;color:#fff;font-size:18px;font-weight:700;">複製到剪貼板</button>
-    <button id="clsExp" style="padding:17px 20px;border-radius:12px;background:transparent;border:1px solid var(--bdr);color:var(--dim);font-size:18px;">關閉</button>
+  return`<div class="modal-bg" id="modalBg">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="font-size:20px;font-weight:700;">${allDone?'✅ 全部完成！':'📤 巡邏報告'}</div>
+      <button id="clsExp" style="width:38px;height:38px;border-radius:50%;border:1px solid var(--bdr);background:transparent;color:var(--dim);font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
+    <div style="font-size:14px;color:var(--dim);margin-bottom:10px;">這就是匯出到 LINE 的格式，複製後貼到群組</div>
+    <textarea readonly style="width:100%;height:160px;background:var(--bg);border:1px solid var(--bdr);border-radius:10px;color:var(--txt);font-size:13px;padding:13px;font-family:monospace;resize:none;">${esc(S.exportTxt)}</textarea>
+    <button id="cpExp" style="width:100%;padding:17px;border-radius:12px;background:${allDone?'var(--ok)':'var(--pri)'};border:none;color:#fff;font-size:18px;font-weight:700;margin-top:12px;">📋 複製到剪貼板</button>
+    <button id="clsExp2" style="width:100%;padding:14px;border-radius:12px;background:transparent;border:1px solid var(--bdr);color:var(--dim);font-size:17px;margin-top:8px;">關閉</button>
   </div>
-  </div></div>`;
+  </div>`;
 }
 
 // ── Bind ──────────────────────────────────────────────────────────────────────
@@ -401,10 +404,14 @@ function bind(){
   });
 
   // Export
+  const modalBg=document.getElementById('modalBg');
+  if(modalBg)modalBg.addEventListener('click',()=>{S.showExport=false;rerender();});
   const cpExp=document.getElementById('cpExp');
   if(cpExp)cpExp.addEventListener('click',async()=>{await copyText(S.exportTxt);S.showExport=false;rerender();});
   const clsExp=document.getElementById('clsExp');
   if(clsExp)clsExp.addEventListener('click',()=>{S.showExport=false;rerender();});
+  const clsExp2=document.getElementById('clsExp2');
+  if(clsExp2)clsExp2.addEventListener('click',()=>{S.showExport=false;rerender();});
 }
 
 render();
